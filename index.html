@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verbinde …</title>
+  <style>
+    :root{
+      --bg: #0b0d12;
+      --fg: #eaf1ff;
+      --muted: #a8b3cf;
+      --accent: #7aa2ff;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg) center/cover no-repeat fixed;
+      color: var(--fg);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      overflow: hidden;
+    }
+
+    /* Fullscreen video */
+    .bg-video {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: brightness(0.6);
+      z-index: -1;
+      background: #000;
+    }
+    /* Overlay gradient for readability */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(1200px 600px at 20% 85%, rgba(122,162,255,.18), transparent 60%),
+                  radial-gradient(900px 500px at 80% 10%, rgba(255,143,191,.12), transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Bottom-left status */
+    .status {
+      position: fixed;
+      left: 18px;
+      bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 16px;
+      background: rgba(12, 16, 24, 0.55);
+      border: 1px solid rgba(122,162,255,0.22);
+      box-shadow: 0 8px 30px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+      z-index: 2;
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(122,162,255,.25);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 0 6px rgba(122,162,255,.55));
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .label {
+      font-size: 15px;
+      letter-spacing: .2px;
+    }
+    .muted {
+      color: var(--muted);
+    }
+
+    /* Cute header text (centered) */
+    .center {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 1;
+      user-select: none;
+    }
+    .title {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      margin: 0 0 8px;
+      text-shadow: 0 6px 28px rgba(0,0,0,.45);
+    }
+    .subtitle {
+      font-size: clamp(14px, 1.8vw, 16px);
+      color: var(--muted);
+      margin: 0;
+    }
+
+    /* Hide video when done (bg image shows through body background) */
+    .video-hidden { display: none !important; }
+
+    /* Accessibility: reduce motion */
+    @media (prefers-reduced-motion: reduce) {
+      .spinner { animation: none; }
+    }
+  </style>
+</head>
+<body style="background-image: url('../bg.png'); background-size: cover; background-position: center;">
+  <!-- Background video -->
+  <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="metadata">
+    <source src="../video-bg.mp4" type="video/mp4" />
+  </video>
+  <div class="overlay" aria-hidden="true"></div>
+
+  <!-- Bottom-left status -->
+  <div class="status" role="status" aria-live="polite" aria-atomic="true">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="label"><span id="statusText" class="muted">Verbinde mit Servern</span><span id="dots">.</span></div>
+  </div>
+
+  <script>
+    // ===== Config =====
+    const STATUS_URL = "https://yf.nasumicraft.de/status.txt";  // Ziel der Erreichbarkeitsprüfung
+    const REDIRECT_TO = "https://yf.nasumicraft.de";             // Weiterleitungsziel
+    const CHECK_INTERVAL_MS = 3000;                              // Retry-Abstand bei Misserfolg
+    const TIMEOUT_MS = 4500;                                     // Netzwerk-Timeout pro Versuch
+    // ==================
+
+    // Dot animation (. .. ...)
+    const statusTextEl = document.getElementById("statusText");
+    const dotsEl = document.getElementById("dots");
+    let baseText = "Verbinde mit Servern";
+    let dotStep = 0;
+    setInterval(() => {
+      dotStep = (dotStep + 1) % 3;
+      dotsEl.textContent = ".".repeat(dotStep + 1);
+    }, 500);
+
+    function setStatusConnecting(){
+      baseText = "Verbinde mit Servern";
+      statusTextEl.textContent = baseText;
+    }
+    function setStatusRetrying(){
+      baseText = "Keine Verbindung, versuche erneut";
+      statusTextEl.textContent = baseText;
+    }
+
+    // Fetch with timeout helper
+    async function fetchWithTimeout(resource, options = {}) {
+      const { timeout = TIMEOUT_MS } = options;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await fetch(resource, {
+          // CORS-Hinweis: Server sollte Access-Control-Allow-Origin setzen
+          method: "GET",
+          cache: "no-store",
+          mode: "cors",
+          redirect: "follow",
+          signal: controller.signal
+        });
+        return response;
+      } finally {
+        clearTimeout(id);
+      }
+    }
+
+    async function checkOnce() {
+      try {
+        const res = await fetchWithTimeout(STATUS_URL);
+        // Wenn fetch klappt und wir einen "ok"-Status bekommen, weiterleiten.
+        if (res && res.ok) {
+          // Optional: kleine Verzögerung für smooth UX
+          window.location.replace(REDIRECT_TO);
+          return true;
+        }
+        // res vorhanden aber nicht ok (404/500) => wie "offline" behandeln
+        return false;
+      } catch (err) {
+        // Netzwerk-/Timeout-/CORS-Fehler => als "keine Verbindung" werten
+        return false;
+      }
+    }
+
+    async function startChecking() {
+      setStatusConnecting();
+      // Sofort ein erster Versuch:
+      let ok = await checkOnce();
+      if (ok) return;
+
+      // Danach in Intervallen erneut probieren:
+      setStatusRetrying();
+      const intervalId = setInterval(async () => {
+        let ok = await checkOnce();
+        if (ok) {
+          clearInterval(intervalId);
+        } else {
+          setStatusRetrying();
+        }
+      }, CHECK_INTERVAL_MS);
+    }
+
+    // Hintergrund-Video -> nach Ende auf Hintergrundbild wechseln
+    const bgVideo = document.getElementById("bgVideo");
+    function hideVideo() {
+      if (!bgVideo) return;
+      bgVideo.pause?.();
+      bgVideo.classList.add("video-hidden");
+      // Body hat bereits background-image: ../bg.png
+    }
+    // Falls Autoplay blockiert wird oder Video fehlschlägt: Bild anzeigen
+    bgVideo?.addEventListener("error", hideVideo, { once: true });
+    bgVideo?.addEventListener("ended", hideVideo, { once: true });
+
+    // Safety: falls Browser Autoplay nicht erlaubt, nach kurzer Zeit fallbacken
+    setTimeout(() => {
+      // Wenn Video noch kaum Fortschritt hat, fallback aktivieren
+      if (bgVideo && !bgVideo.paused && bgVideo.readyState < 2) {
+        hideVideo();
+      }
+    }, 3500);
+
+    // Los geht’s~
+    startChecking();
+  </script>
+</body>
+</html>
