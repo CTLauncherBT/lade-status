@@ -121,6 +121,38 @@
     </div>
   </div>
 
+  <!-- Fehlermeldungs-Fenster -->
+<div id="failWindow" style="
+  display:none;
+  position: fixed;
+  top:50%;
+  left:50%;
+  transform: translate(-50%,-50%);
+  background: #222;
+  color:#fff;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 8px 30px rgba(0,0,0,0.6);
+  z-index:9999;
+  width:300px;
+  text-align:center;
+  font-family:Segoe UI, sans-serif;
+">
+  <h3 style="margin-top:0;">Verbindung fehlgeschlagen</h3>
+  <p>Verbindung zu den NasumiCraft Servern nicht möglich.<br>
+  Es sieht so aus, als ob das Nasumify Network nicht antworten würde.</p>
+  <button onclick="closeFailWindow()" style="
+    margin-top:15px;
+    padding:8px 16px;
+    background:#4a90e2;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:14px;
+  ">Okay!</button>
+</div>
+
 <script>
 /* Süßes Anime-Style Kommentar~ ♡
    - Spielt das Video einmal (kein loop).
@@ -143,6 +175,7 @@ let dotsMode = 'connecting'; // 'connecting' oder 'retrying'
 let dotInterval = null;
 let checkInterval = null;
 let retryTimer = null;
+let failCount = 0;
 
 // Punkt-Animation
 function startDotAnimation() {
@@ -170,12 +203,19 @@ function setConnecting() {
 }
 
 function setRetrying() {
+  failCount++;
+
+  // Wenn schon 5 Fehlversuche -> Popup zeigen
+  if (failCount >= 5) {
+    showFailWindow();
+    return;
+  }
+
   dotsMode = 'retrying';
   let countdown = 5; // Sekunden
   statusTextEl.textContent = `Keine Verbindung, versuche es erneut (${countdown})`;
   spinnerEl.style.display = '';
 
-  // Timer runterzählen
   if (retryTimer) clearInterval(retryTimer);
   retryTimer = setInterval(() => {
     countdown--;
