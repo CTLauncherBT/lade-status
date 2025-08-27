@@ -61,9 +61,9 @@ function stopDotAnimation(){ if(dotInterval){clearInterval(dotInterval); dotInte
 function setConnecting(){ statusTextEl.textContent='Verbinde mit Servern'; startDotAnimation(); spinnerEl.style.display=''; }
 
 function setRetrying(){
-  statusTextEl.textContent='Keine Verbindung, versuche es erneut…';
+  statusTextEl.textContent='Keine Verbindung, versuche es erneut';
   spinnerEl.style.display='';
-  setTimeout(()=>{ setConnecting(); checkStatus(); }, 5000);
+  setTimeout(()=>{ setConnecting(); checkStatus(); }, 10000);
 }
 function setHiddenSpinner(){ spinnerEl.style.display='none'; stopDotAnimation(); }
 
