@@ -1,166 +1,289 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Verbinde …</title>
-  <style>
-    :root{
-      --bg: #0b0d12;
-      --fg: #eaf1ff;
-      --muted: #a8b3cf;
-      --accent: #7aa2ff;
-    }
-    html, body {
-      height: 100%;
-      margin: 0;
-      /* nicht mehr background überschreiben! */
-      background-color: var(--bg);
-      color: var(--fg);
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
-      overflow: hidden;
-      background-size: cover;
-      background-position: center;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Verbinden…</title>
+<style>
+  /* Basis-Reset */
+  html,body {
+    height: 100%;
+    margin: 0;
+  }
 
-    .bg-image {
-      position: fixed;
-      inset: 0;
-      background: url("https://ctlauncherbt.github.io/lade-status/bg.png") center/cover no-repeat;
-      z-index: -2; /* unter dem Video */
-    }
-    
-    .bg-video {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: brightness(0.6);
-      z-index: -1; /* über dem Bild, unter Overlay/UI */
-      background: #000;
-    }
+  /* Hintergrund-Container */
+  body {
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background: #000 center/cover no-repeat;
+    overflow: hidden;
+    color: #fff;
+  }
 
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(1200px 600px at 20% 85%, rgba(122,162,255,.18), transparent 60%),
-                  radial-gradient(900px 500px at 80% 10%, rgba(255,143,191,.12), transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
+  /* Vollflächiges Video (hintergrund) */
+  #bgVideo {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none; /* keine Interaktion */
+  }
 
-    .status {
-      position: fixed;
-      left: 18px;
-      bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      border-radius: 16px;
-      background: rgba(12, 16, 24, 0.55);
-      border: 1px solid rgba(122,162,255,0.22);
-      box-shadow: 0 8px 30px rgba(0,0,0,.35);
-      backdrop-filter: blur(6px);
-      z-index: 2;
-    }
+  /* Wenn das Video weg ist, zeigt body das bg.png als Hintergrund */
+  .bg-image {
+    background-image: url('../bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
 
-    .spinner {
-      width: 18px;
-      height: 18px;
-      border: 2.5px solid rgba(122,162,255,.25);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      flex: 0 0 auto;
-      filter: drop-shadow(0 0 6px rgba(122,162,255,.55));
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+  /* Overlay für Inhalte (um Schrift sichtbar zu machen) */
+  .overlay {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    width: 100%;
+  }
 
-    .label { font-size: 15px; letter-spacing: .2px; }
-    .muted { color: var(--muted); }
+  /* Bottom-left load box */
+  .status-box {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 3;
+    background: rgba(0,0,0,0.45);
+    padding: 10px 12px;
+    border-radius: 10px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+  }
 
-    .video-hidden { display: none !important; }
+  /* Ladesymbol (CSS Spinner) */
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.18);
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+    box-sizing: border-box;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 
-    @media (prefers-reduced-motion: reduce) {
-      .spinner { animation: none; }
-    }
-  </style>
+  /* Kleines, süßes Schriftstyling */
+  .cute {
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  }
+
+  /* Versteckte video-fallback-box (falls Autoplay blockiert) */
+  #videoFallback {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    background: rgba(0,0,0,0.45);
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
+  }
+</style>
 </head>
 <body>
-  <!-- Background image (unter dem Video) -->
-  <div class="bg-image"></div>
-
-  <!-- Background video (davor) -->
-  <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="metadata">
-    <source src="https://ctlauncherbt.github.io/lade-status/video.mp4" type="video/mp4" />
+  <!-- Video: einmal abspielen, nicht loopen -->
+  <video id="bgVideo" autoplay muted playsinline>
+    <source src="../video.mp4" type="video/mp4">
+    Dein Browser unterstützt kein HTML5-Video.
   </video>
 
-  <div class="overlay" aria-hidden="true"></div>
+  <div class="overlay" id="overlay">
+    <div id="videoFallback">Autoplay blockiert? Klicke zum Starten.</div>
 
-  <div class="status">
-    <div class="spinner"></div>
-    <div class="label"><span id="statusText" class="muted">Verbinde mit Servern</span><span id="dots">.</span></div>
+    <!-- Status-Box unten links -->
+    <div class="status-box" id="statusBox" aria-live="polite">
+      <div class="spinner" id="spinner" title="lade"></div>
+      <div>
+        <span class="cute" id="statusText">Verbinde mit Servern</span><span id="dots">.</span>
+      </div>
+    </div>
   </div>
 
-  <script>
-    const STATUS_URL = "https://yf.nasumicraft.de/status.txt";
-    const REDIRECT_TO = "https://yf.nasumicraft.de";
-    const CHECK_INTERVAL_MS = 3000;
-    const TIMEOUT_MS = 4500;
+<script>
+/* Süßes Anime-Style Kommentar~ ♡
+   - Spielt das Video einmal (kein loop).
+   - Wenn das Video fertig ist, wird ../bg.png als dauerhaftes Hintergrundbild gesetzt.
+   - Pingt yf.nasumicraft.de/status.txt periodisch.
+   - Wenn erreichbar -> Weiterleitung zu https://yf.nasumicraft.de
+   - Wenn nicht erreichbar -> "Keine Verbindung, versuche es erneut…" mit animierten Punkten.
+*/
 
-    const statusTextEl = document.getElementById("statusText");
-    const dotsEl = document.getElementById("dots");
-    let dotStep = 0;
-    setInterval(() => {
-      dotStep = (dotStep + 1) % 3;
-      dotsEl.textContent = ".".repeat(dotStep + 1);
-    }, 500);
+const statusTextEl = document.getElementById('statusText');
+const dotsEl = document.getElementById('dots');
+const spinnerEl = document.getElementById('spinner');
+const statusBoxEl = document.getElementById('statusBox');
+const video = document.getElementById('bgVideo');
+const overlay = document.getElementById('overlay');
+const videoFallback = document.getElementById('videoFallback');
 
-    function setStatus(text){ statusTextEl.textContent = text; }
+let dots = 0;
+let dotsMode = 'connecting'; // 'connecting' oder 'retrying'
+let dotInterval = null;
+let checkInterval = null;
 
-    async function fetchWithTimeout(resource, timeout = TIMEOUT_MS) {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
-      try {
-        return await fetch(resource, { cache:"no-store", mode:"cors", signal:controller.signal });
-      } finally { clearTimeout(id); }
+// Punkt-Animation
+function startDotAnimation() {
+  if (dotInterval) return;
+  dotInterval = setInterval(() => {
+    dots = (dots + 1) % 4; // 0..3
+    dotsEl.textContent = '.'.repeat(dots === 0 ? 1 : dots); // zeigt mindestens 1 Punkt für hübsches Gefühl
+  }, 500);
+}
+
+function stopDotAnimation() {
+  if (dotInterval) {
+    clearInterval(dotInterval);
+    dotInterval = null;
+  }
+  dotsEl.textContent = '';
+}
+
+// Status-Anzeige updaten
+function setConnecting() {
+  dotsMode = 'connecting';
+  statusTextEl.textContent = 'Verbinde mit Servern';
+  startDotAnimation();
+  spinnerEl.style.display = '';
+}
+
+function setRetrying() {
+  dotsMode = 'retrying';
+  statusTextEl.textContent = 'Keine Verbindung, versuche es erneut';
+  startDotAnimation();
+  spinnerEl.style.display = '';
+}
+
+function setHiddenSpinner() {
+  spinnerEl.style.display = 'none';
+  stopDotAnimation();
+}
+
+// Prüfen, ob status.txt erreichbar ist
+async function checkStatus() {
+  const url = 'https://yf.nasumicraft.de/status.txt';
+  // Wir versuchen ein kurzes Fetch mit Timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000); // 4s timeout
+
+  try {
+    const resp = await fetch(url, {
+      method: 'GET',
+      cache: 'no-cache',
+      mode: 'cors', // server muss CORS erlauben
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (resp.ok) {
+      // erreichbar -> weiterleiten
+      statusTextEl.textContent = 'Verbunden! Leite weiter… ✨';
+      spinnerEl.style.display = 'none';
+      stopDotAnimation();
+      // leichte Verzögerung, damit der User das sieht
+      setTimeout(() => {
+        // Weiterleitung
+        window.location.href = 'https://yf.nasumicraft.de';
+      }, 700);
+    } else {
+      // Antwort erhalten, aber Status nicht OK (z.B. 404/500) -> zählt als "nicht verfügbar"
+      setRetrying();
     }
+  } catch (err) {
+    // Fehler (Netzwerk/CORS/Timeout)
+    setRetrying();
+    // console.log('Check error:', err);
+  } finally {
+    try { clearTimeout(timeout); } catch(e){}
+  }
+}
 
-    async function checkOnce() {
-      try {
-        const res = await fetchWithTimeout(STATUS_URL);
-        if (res.ok) {
-          window.location.replace(REDIRECT_TO);
-          return true;
-        }
-      } catch(e){}
-      return false;
-    }
+// Wiederholt prüfen (zuerst schnell, dann normal)
+function startCheckingLoop() {
+  // Sofort prüfen
+  checkStatus();
+  // Dann jede 4 Sekunden erneut prüfen
+  if (checkInterval) clearInterval(checkInterval);
+  checkInterval = setInterval(checkStatus, 4000);
+}
 
-    async function startChecking() {
-      setStatus("Verbinde mit Servern");
-      let ok = await checkOnce();
-      if (ok) return;
-      setStatus("Keine Verbindung, versuche erneut");
-      const interval = setInterval(async ()=>{
-        if (await checkOnce()) clearInterval(interval);
-        else setStatus("Keine Verbindung, versuche erneut");
-      }, CHECK_INTERVAL_MS);
-    }
+// Video: Wenn zu Ende, Background auf bg.png setzen
+function onVideoEnded() {
+  // entferne Video-Element oder verstecke es
+  video.pause();
+  video.style.display = 'none';
+  // Setze body-Klasse für bg.png
+  document.body.classList.add('bg-image');
+  // Overlay/inhaltsfarben falls nötig belassen
+}
 
-    const bgVideo = document.getElementById("bgVideo");
-    function hideVideo(){
-      bgVideo.pause?.();
-      bgVideo.classList.add("video-hidden");
-    }
-    bgVideo.addEventListener("ended", hideVideo);
-    bgVideo.addEventListener("error", hideVideo);
+// Falls Autoplay blockiert: zeige Hinweis und mache Klick zum Starten
+function handleAutoplay() {
+  const playPromise = video.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      // läuft, alles gut
+    }).catch(() => {
+      // Autoplay blockiert: zeige Fallback Hinweis
+      videoFallback.style.display = 'block';
+      videoFallback.style.cursor = 'pointer';
+      videoFallback.addEventListener('click', () => {
+        video.muted = false; // optional
+        video.play().then(() => {
+          videoFallback.style.display = 'none';
+        }).catch(()=>{ /* ok */ });
+      });
+    });
+  }
+}
 
-    startChecking();
-  </script>
+// Event-Listener
+video.addEventListener('ended', onVideoEnded);
+video.addEventListener('play', () => {
+  // wenn das Video wirklich spielt, können wir beginnen, den Server zu checken
+  // aber wir starten check loop sowieso beim Laden
+});
+video.addEventListener('loadeddata', () => {
+  // Sobald Video geladen ist, starte die Connection Checks
+});
+
+// Initial Setup
+setConnecting();
+startDotAnimation();
+startCheckingLoop();
+handleAutoplay();
+
+// Falls Video nie endet (z.B. Fehler) -> nach 30s trotzdem das Hintergrundbild zeigen
+setTimeout(() => {
+  if (!video.paused && !video.ended) {
+    // Optional: wenn das Video hängt, weiter normal lassen — hier entscheiden wir nicht automatisch.
+    // Wenn du möchtest, können wir nach 30s das Bild trotzdem setzen:
+    // onVideoEnded();
+  }
+}, 30000);
+
+</script>
 </body>
 </html>
