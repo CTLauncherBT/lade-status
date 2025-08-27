@@ -211,12 +211,15 @@ function setRetrying() {
     return;
   }
 
-  dotsMode = 'retrying';
-  let countdown = 5; // Sekunden
+  // Immer sofort "Keine Verbindung..." anzeigen
+  let countdown = 5;
   statusTextEl.textContent = `Keine Verbindung, versuche es erneut (${countdown})`;
   spinnerEl.style.display = '';
 
+  // Falls schon ein Timer läuft -> stoppen
   if (retryTimer) clearInterval(retryTimer);
+
+  // Countdown runterzählen
   retryTimer = setInterval(() => {
     countdown--;
     if (countdown > 0) {
@@ -224,7 +227,7 @@ function setRetrying() {
     } else {
       clearInterval(retryTimer);
       retryTimer = null;
-      setConnecting();   // zurück zu "Verbinde mit Servern..."
+      setConnecting();   // "Verbinde mit Servern…" anzeigen
       checkStatus();     // neuen Versuch starten
     }
   }, 1000);
