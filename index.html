@@ -1,4 +1,4 @@
-<!doctype html>
+<<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8" />
@@ -80,15 +80,9 @@ function setConnecting(){ statusTextEl.textContent='Verbinde mit Servern'; start
 function setRetrying(){
   failCount++;
   if(failCount>=5){ showFailWindow(); return; }
-  let countdown=5;
-  statusTextEl.textContent=`Keine Verbindung, versuche es erneut (${countdown})`;
+  statusTextEl.textContent='Keine Verbindung, versuche es erneut…';
   spinnerEl.style.display='';
-  if(retryTimer) clearInterval(retryTimer);
-  retryTimer=setInterval(()=>{
-    countdown--;
-    if(countdown>0){ statusTextEl.textContent=`Keine Verbindung, versuche es erneut (${countdown})`; }
-    else { clearInterval(retryTimer); retryTimer=null; setConnecting(); checkStatus(); }
-  },1000);
+  setTimeout(()=>{ setConnecting(); checkStatus(); }, 5000);
 }
 function setHiddenSpinner(){ spinnerEl.style.display='none'; stopDotAnimation(); }
 
