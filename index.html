@@ -48,10 +48,19 @@
 
   /* Bottom-left load box */
 .status-box {
-    background: none;   /* kein Hintergrund */
-    box-shadow: none;   /* kein Schatten */
-    backdrop-filter: none; /* kein Blur */
-    padding: 0;         /* optional, enger */
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 3;
+
+    /* Hintergrund & Rahmen entfernt */
+    background: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
 }
 
   /* Ladesymbol (CSS Spinner) */
