@@ -1,4 +1,4 @@
-<<!doctype html>
+<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8" />
@@ -26,16 +26,6 @@
   #videoFallback { position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:4; background:rgba(0,0,0,0.45); padding:6px 10px; border-radius:8px; display:none; }
 
   @media (prefers-reduced-motion: reduce) { .spinner { animation:none; } }
-
-  /* Fehlermeldungs-Fenster */
-  #failWindow {
-    display:none; position: fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    background:#222; color:#fff; padding:20px; border-radius:10px; box-shadow:0 8px 30px rgba(0,0,0,0.6);
-    z-index:9999; width:300px; text-align:center; font-family:Segoe UI, sans-serif;
-  }
-  #failWindow button {
-    margin-top:15px; padding:8px 16px; background:#4a90e2; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px;
-  }
 </style>
 </head>
 <body>
@@ -49,16 +39,9 @@
   <div class="status-box" id="statusBox" aria-live="polite">
     <div class="spinner" id="spinner" title="lade"></div>
     <div>
-      <span class="cute" id="statusText">Verbinde mit Servern</span><span id="dots">.</span>
+      <span class="cute" id="statusText">Verbinde mit Serveren</span><span id="dots">.</span>
     </div>
   </div>
-</div>
-
-<div id="failWindow">
-  <h3 style="margin-top:0;">Verbindung fehlgeschlagen</h3>
-  <p>Verbindung zu den NasumiCraft Servern nicht möglich.<br>
-  Es sieht so aus, als ob das Nasumify Network nicht reagieren würde.</p>
-  <button onclick="closeFailWindow()">Okay!</button>
 </div>
 
 <script>
@@ -68,7 +51,7 @@ const spinnerEl = document.getElementById('spinner');
 const video = document.getElementById('bgVideo');
 const videoFallback = document.getElementById('videoFallback');
 
-let dots=0, dotInterval=null, checkInterval=null, retryTimer=null, failCount=0;
+let dots=0, dotInterval=null, checkInterval=null;
 
 // Punkte-Animation
 function startDotAnimation(){ if(dotInterval) return; dotInterval=setInterval(()=>{dots=(dots+1)%4; dotsEl.textContent='.'.repeat(dots===0?1:dots);},500);}
@@ -77,24 +60,10 @@ function stopDotAnimation(){ if(dotInterval){clearInterval(dotInterval); dotInte
 // Statusfunktionen
 function setConnecting(){ statusTextEl.textContent='Verbinde mit Servern'; startDotAnimation(); spinnerEl.style.display=''; }
 
-function setRetrying() {
-  failCount++;
-
-  // Nach 5 Fehlversuchen -> Popup zeigen
-  if (failCount >= 5) {
-    showFailWindow();
-    return;
-  }
-
-  // Einfach direkt Text setzen
-  statusTextEl.textContent = 'Keine Verbindung, versuche es erneut…';
-  spinnerEl.style.display = '';
-
-  // Nach 5 Sekunden wieder zu "Verbinde mit Servern…" wechseln und neuen Versuch starten
-  setTimeout(() => {
-    setConnecting();
-    checkStatus();
-  }, 5000);
+function setRetrying(){
+  statusTextEl.textContent='Keine Verbindung, versuche es erneut…';
+  spinnerEl.style.display='';
+  setTimeout(()=>{ setConnecting(); checkStatus(); }, 5000);
 }
 function setHiddenSpinner(){ spinnerEl.style.display='none'; stopDotAnimation(); }
 
@@ -129,10 +98,6 @@ function handleAutoplay(){
     videoFallback.addEventListener('click',()=>{ video.muted=false; video.play().then(()=>{videoFallback.style.display='none';}).catch(()=>{}); });
   }); }
 }
-
-// Fail Window
-function showFailWindow(){ document.getElementById('failWindow').style.display='block'; }
-function closeFailWindow(){ document.getElementById('failWindow').style.display='none'; }
 
 // Init
 setConnecting(); startDotAnimation(); startCheckingLoop(); handleAutoplay();
