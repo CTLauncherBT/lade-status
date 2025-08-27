@@ -77,12 +77,24 @@ function stopDotAnimation(){ if(dotInterval){clearInterval(dotInterval); dotInte
 // Statusfunktionen
 function setConnecting(){ statusTextEl.textContent='Verbinde mit Servern'; startDotAnimation(); spinnerEl.style.display=''; }
 
-function setRetrying(){
+function setRetrying() {
   failCount++;
-  if(failCount>=5){ showFailWindow(); return; }
-  statusTextEl.textContent='Keine Verbindung, versuche es erneut…';
-  spinnerEl.style.display='';
-  setTimeout(()=>{ setConnecting(); checkStatus(); }, 5000);
+
+  // Nach 5 Fehlversuchen -> Popup zeigen
+  if (failCount >= 5) {
+    showFailWindow();
+    return;
+  }
+
+  // Einfach direkt Text setzen
+  statusTextEl.textContent = 'Keine Verbindung, versuche es erneut…';
+  spinnerEl.style.display = '';
+
+  // Nach 5 Sekunden wieder zu "Verbinde mit Servern…" wechseln und neuen Versuch starten
+  setTimeout(() => {
+    setConnecting();
+    checkStatus();
+  }, 5000);
 }
 function setHiddenSpinner(){ spinnerEl.style.display='none'; stopDotAnimation(); }
 
