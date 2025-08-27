@@ -142,6 +142,7 @@ let dots = 0;
 let dotsMode = 'connecting'; // 'connecting' oder 'retrying'
 let dotInterval = null;
 let checkInterval = null;
+let retryTimer = null;
 
 // Punkt-Animation
 function startDotAnimation() {
@@ -170,9 +171,23 @@ function setConnecting() {
 
 function setRetrying() {
   dotsMode = 'retrying';
-  statusTextEl.textContent = 'Keine Verbindung, versuche es erneut';
-  startDotAnimation();
+  let countdown = 5; // Sekunden
+  statusTextEl.textContent = `Keine Verbindung, versuche es erneut (${countdown})`;
   spinnerEl.style.display = '';
+
+  // Timer runterzählen
+  if (retryTimer) clearInterval(retryTimer);
+  retryTimer = setInterval(() => {
+    countdown--;
+    if (countdown > 0) {
+      statusTextEl.textContent = `Keine Verbindung, versuche es erneut (${countdown})`;
+    } else {
+      clearInterval(retryTimer);
+      retryTimer = null;
+      setConnecting();   // zurück zu "Verbinde mit Servern..."
+      checkStatus();     // neuen Versuch starten
+    }
+  }, 1000);
 }
 
 function setHiddenSpinner() {
